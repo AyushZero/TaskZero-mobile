@@ -7,8 +7,21 @@ void main() {
   runApp(const FigmaToCodeApp());
 }
 
-class FigmaToCodeApp extends StatelessWidget {
+class FigmaToCodeApp extends StatefulWidget {
   const FigmaToCodeApp({super.key});
+
+  @override
+  State<FigmaToCodeApp> createState() => _FigmaToCodeAppState();
+}
+
+class _FigmaToCodeAppState extends State<FigmaToCodeApp> {
+  bool _isDarkMode = false;
+
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +33,9 @@ class FigmaToCodeApp extends StatelessWidget {
           secondary: Color(0xFFD9D9D9),
           surface: Colors.white,
           error: Colors.red,
+          onPrimary: Colors.black,
+          onSecondary: Colors.black,
+          onSurface: Colors.black,
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Colors.black),
@@ -33,13 +49,20 @@ class FigmaToCodeApp extends StatelessWidget {
           secondary: Color(0xFF2C2C2C),
           surface: Color(0xFF1A1A1A),
           error: Colors.red,
+          onPrimary: Colors.white,
+          onSecondary: Colors.white,
+          onSurface: Colors.white,
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Colors.white),
           bodyMedium: TextStyle(color: Colors.white),
         ),
       ),
-      home: const TaskManagerScreen(),
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      home: TaskManagerScreen(
+        isDarkMode: _isDarkMode,
+        toggleTheme: _toggleTheme,
+      ),
     );
   }
 }
@@ -69,7 +92,14 @@ class Task {
 }
 
 class TaskManagerScreen extends StatefulWidget {
-  const TaskManagerScreen({super.key});
+  final bool isDarkMode;
+  final VoidCallback toggleTheme;
+
+  const TaskManagerScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.toggleTheme,
+  });
 
   @override
   State<TaskManagerScreen> createState() => _TaskManagerScreenState();
@@ -77,7 +107,6 @@ class TaskManagerScreen extends StatefulWidget {
 
 class _TaskManagerScreenState extends State<TaskManagerScreen> {
   final List<Task> _tasks = [];
-  bool _isDarkMode = false;
   bool _showArchived = false;
   final TextEditingController _taskController = TextEditingController();
   late SharedPreferences _prefs;
@@ -86,10 +115,24 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
   void initState() {
     super.initState();
     _loadTasks();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateSystemOverlayStyle());
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskManagerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isDarkMode != widget.isDarkMode) {
+      _updateSystemOverlayStyle();
+    }
+  }
+
+  void _updateSystemOverlayStyle() {
+    final brightness = widget.isDarkMode ? Brightness.light : Brightness.dark;
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: brightness,
+        statusBarBrightness: brightness,
       ),
     );
   }
@@ -116,12 +159,6 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
         _saveTasks();
       });
     }
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
   }
 
   void _toggleView() {
@@ -231,204 +268,198 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return MaterialApp(
-      theme: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      home: Scaffold(
-        body: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 23),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            if (_showArchived) _toggleView();
-                          },
-                          child: Text(
-                            'Tasks',
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: _showArchived ? colorScheme.primary.withAlpha(64) : colorScheme.primary,
-                              fontSize: 28.80,
-                              fontFamily: 'Nixie One',
-                              fontWeight: FontWeight.w400,
-                            ),
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 23),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          if (_showArchived) _toggleView();
+                        },
+                        child: Text(
+                          'Tasks',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: _showArchived ? colorScheme.primary.withAlpha(64) : colorScheme.primary,
+                            fontSize: 28.80,
+                            fontFamily: 'Nixie One',
+                            fontWeight: FontWeight.w400,
                           ),
-                        ),
-                        const SizedBox(width: 20),
-                        GestureDetector(
-                          onTap: () {
-                            if (!_showArchived) _toggleView();
-                          },
-                          child: Text(
-                            'Archived',
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: _showArchived ? colorScheme.primary : colorScheme.primary.withAlpha(64),
-                              fontSize: 28.80,
-                              fontFamily: 'Nixie One',
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: _toggleTheme,
-                      child: Container(
-                        width: 39,
-                        height: 39,
-                        decoration: ShapeDecoration(
-                          color: colorScheme.primary,
-                          shape: const OvalBorder(),
                         ),
                       ),
+                      const SizedBox(width: 20),
+                      GestureDetector(
+                        onTap: () {
+                          if (!_showArchived) _toggleView();
+                        },
+                        child: Text(
+                          'Archived',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: _showArchived ? colorScheme.primary : colorScheme.primary.withAlpha(64),
+                            fontSize: 28.80,
+                            fontFamily: 'Nixie One',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: widget.toggleTheme,
+                    child: Container(
+                      width: 39,
+                      height: 39,
+                      decoration: ShapeDecoration(
+                        color: colorScheme.primary,
+                        shape: const OvalBorder(),
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    if (details.primaryVelocity! > 0) {
-                      // Swipe right
-                      if (_showArchived) _toggleView();
-                    } else if (details.primaryVelocity! < 0) {
-                      // Swipe left
-                      if (!_showArchived) _toggleView();
-                    }
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 28),
-                    decoration: ShapeDecoration(
-                      color: colorScheme.secondary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity! > 0) {
+                    if (_showArchived) _toggleView();
+                  } else if (details.primaryVelocity! < 0) {
+                    if (!_showArchived) _toggleView();
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 28),
+                  decoration: ShapeDecoration(
+                    color: colorScheme.secondary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: _tasks.where((task) => task.isArchived == _showArchived).length,
-                      itemBuilder: (context, index) {
-                        final allTasks = _tasks.where((task) => task.isArchived == _showArchived).toList();
-                        final incompleteTasks = allTasks.where((task) => !task.isCompleted).toList();
-                        final completedTasks = allTasks.where((task) => task.isCompleted).toList();
-                        
-                        // If we're past the incomplete tasks, show completed tasks
-                        final task = index < incompleteTasks.length 
-                            ? incompleteTasks[index]
-                            : completedTasks[index - incompleteTasks.length];
+                  ),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: _tasks.where((task) => task.isArchived == _showArchived).length,
+                    itemBuilder: (context, index) {
+                      final allTasks = _tasks.where((task) => task.isArchived == _showArchived).toList();
+                      final incompleteTasks = allTasks.where((task) => !task.isCompleted).toList();
+                      final completedTasks = allTasks.where((task) => task.isCompleted).toList();
+                      
+                      final task = index < incompleteTasks.length 
+                          ? incompleteTasks[index]
+                          : completedTasks[index - incompleteTasks.length];
 
-                        return Dismissible(
-                          key: Key(task.title),
-                          onDismissed: (direction) {
-                            if (direction == DismissDirection.startToEnd) {
-                              if (!_showArchived) {
-                                _archiveTask(index);
-                              } else {
-                                _unarchiveTask(index);
-                              }
+                      return Dismissible(
+                        key: Key(task.title),
+                        onDismissed: (direction) {
+                          if (direction == DismissDirection.startToEnd) {
+                            if (!_showArchived) {
+                              _archiveTask(index);
                             } else {
-                              if (!_showArchived) {
-                                if (task.isCompleted) {
-                                  _incompleteTask(index);
-                                } else {
-                                  _completeTask(index);
-                                }
+                              _unarchiveTask(index);
+                            }
+                          } else {
+                            if (!_showArchived) {
+                              if (task.isCompleted) {
+                                _incompleteTask(index);
+                              } else {
+                                _completeTask(index);
                               }
                             }
-                          },
-                          background: Container(
-                            color: Colors.blue,
-                            alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.only(left: 20),
-                            child: Icon(
-                              _showArchived ? Icons.unarchive : Icons.archive,
-                              color: Colors.white,
-                            ),
+                          }
+                        },
+                        background: Container(
+                          color: Colors.blue,
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.only(left: 20),
+                          child: Icon(
+                            _showArchived ? Icons.unarchive : Icons.archive,
+                            color: Colors.white,
                           ),
-                          secondaryBackground: Container(
-                            color: Colors.green,
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            child: Icon(
-                              task.isCompleted ? Icons.undo : Icons.check,
-                              color: Colors.white,
-                            ),
+                        ),
+                        secondaryBackground: Container(
+                          color: Colors.green,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: Icon(
+                            task.isCompleted ? Icons.undo : Icons.check,
+                            color: Colors.white,
                           ),
-                          child: GestureDetector(
-                            onLongPress: () => _showTaskOptions(context, index),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface,
-                                borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: GestureDetector(
+                          onLongPress: () => _showTaskOptions(context, index),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            width: double.infinity,
+                            child: Text(
+                              task.title,
+                              style: textTheme.bodyMedium?.copyWith(
+                                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                               ),
-                              width: double.infinity,
-                              child: Text(
-                                task.title,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                                ),
-                              ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 44,
-                        decoration: ShapeDecoration(
-                          color: colorScheme.secondary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(19),
-                          ),
-                        ),
-                        child: TextField(
-                          controller: _taskController,
-                          style: textTheme.bodyMedium,
-                          decoration: InputDecoration(
-                            hintText: 'Add a new task',
-                            hintStyle: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.primary.withAlpha(128),
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 44,
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
                       height: 44,
                       decoration: ShapeDecoration(
                         color: colorScheme.secondary,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(19),
                         ),
                       ),
-                      child: IconButton(
-                        icon: Icon(Icons.add, color: colorScheme.primary),
-                        onPressed: _addTask,
+                      child: TextField(
+                        controller: _taskController,
+                        style: textTheme.bodyMedium,
+                        decoration: InputDecoration(
+                          hintText: 'Add a new task',
+                          hintStyle: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.primary.withAlpha(128),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: ShapeDecoration(
+                      color: colorScheme.secondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.add, color: colorScheme.primary),
+                      onPressed: _addTask,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
