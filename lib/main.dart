@@ -187,6 +187,9 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
     setState(() {
       final task = _tasks.where((task) => task.isArchived == _showArchived).toList()[index];
       task.isCompleted = true;
+      if (_showArchived) {
+        task.isArchived = false;
+      }
       _saveTasks();
     });
   }
@@ -217,19 +220,19 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ListTile(
+                leading: const Icon(Icons.check),
+                title: Text(task.isCompleted ? 'Mark as Incomplete' : 'Mark as Complete'),
+                onTap: () {
+                  if (task.isCompleted) {
+                    _incompleteTask(index);
+                  } else {
+                    _completeTask(index);
+                  }
+                  Navigator.pop(context);
+                },
+              ),
               if (!_showArchived) ...[
-                ListTile(
-                  leading: const Icon(Icons.check),
-                  title: Text(task.isCompleted ? 'Mark as Incomplete' : 'Mark as Complete'),
-                  onTap: () {
-                    if (task.isCompleted) {
-                      _incompleteTask(index);
-                    } else {
-                      _completeTask(index);
-                    }
-                    Navigator.pop(context);
-                  },
-                ),
                 ListTile(
                   leading: const Icon(Icons.archive),
                   title: const Text('Archive'),
