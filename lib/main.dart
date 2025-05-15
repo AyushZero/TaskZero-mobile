@@ -354,7 +354,7 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
                           : completedTasks[index - incompleteTasks.length];
 
                       return Dismissible(
-                        key: Key(task.title),
+                          key: UniqueKey(),
                         onDismissed: (direction) {
                           if (direction == DismissDirection.startToEnd) {
                             if (!_showArchived) {
